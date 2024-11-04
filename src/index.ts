@@ -17,8 +17,6 @@ class BubblesRising {
   private ctx: CanvasRenderingContext2D | null = null;
   private width: number = 0;
   private height: number = 0;
-  private fps: number = 60;
-  private frameTime: number = 1000 / this.fps;
   private particles: Particle[] = [];
   private particlePool: Particle[] = [];
   private lastParticleAddTime: number = performance.now();
@@ -30,7 +28,12 @@ class BubblesRising {
 
   private static readonly PARTICLE_ADD_INTERVAL = 500;
   private static readonly PARTICLE_COUNT = 30;
-  private static readonly MAX_ELAPSED_TIME = 1200;
+  private static readonly MAX_ELAPSED_TIME = 400;
+  private static readonly DEFAULT_VELOCITY_X = 0.02;
+  private static readonly DEFAULT_OPACITY_DECAY = 0.0015;
+  private static readonly ACCELERATION_Y_DIVISOR = -120000;
+  private static readonly ACCELERATION_FACTOR_DIVISOR = 10000;
+  private static readonly WOBBLE_RANGE: [number, number] = [-0.0075, 0.0075];
 
   constructor(
     options: { el?: HTMLElement | string; color?: string; sizes?: [number, number] } = {},
@@ -60,11 +63,6 @@ class BubblesRising {
 
     this.container.append(this.canvas);
     this.ctx = this.canvas.getContext('2d');
-
-    if (!this.ctx) return;
-
-    this.particleColor = color;
-    this.sizes = sizes;
   }
 
   private initializeCanvas(): void {
@@ -84,8 +82,7 @@ class BubblesRising {
     this.resizeObserver = new ResizeObserver(() => {
       if (!this.resizeScheduled) {
         this.resizeScheduled = true;
-
-        requestAnimationFrame(() => this.handleResize());
+        this.handleResize();
       }
     });
 
@@ -97,22 +94,42 @@ class BubblesRising {
     this.initializeCanvas();
   }
 
+  private lastFrameTime: number = performance.now();
+
+  private calculateParticleCount(): number {
+    const area = this.width * this.height;
+    const baseArea = 1920 * 1080;
+    const scalingFactor = area / baseArea;
+    const minParticles = 10;
+    const maxParticles = 100;
+
+    return Math.max(
+      minParticles,
+      Math.min(maxParticles, Math.round(BubblesRising.PARTICLE_COUNT * scalingFactor)),
+    );
+  }
+
   private renderLoop = (): void => {
     const now = performance.now();
+    const deltaTime = now - this.lastFrameTime;
+
+    this.lastFrameTime = now;
 
     this.animationFrameId = requestAnimationFrame(this.renderLoop);
 
     if (!this.ctx || !this.canvas) return;
 
     if (now - this.lastParticleAddTime >= BubblesRising.PARTICLE_ADD_INTERVAL) {
-      this.addParticles(BubblesRising.PARTICLE_COUNT);
+      const particleCount = this.calculateParticleCount();
+
+      this.addParticles(particleCount);
       this.lastParticleAddTime = now;
     }
 
-    this.render();
+    this.render(deltaTime);
   };
 
-  private render(): void {
+  private render(deltaTime: number): void {
     if (!this.ctx) return;
 
     this.ctx.clearRect(0, 0, this.width, this.height);
@@ -121,7 +138,7 @@ class BubblesRising {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const particle = this.particles[i];
 
-      this.updateParticle(particle);
+      this.updateParticle(particle, deltaTime);
       this.drawParticle(particle);
 
       if (particle.opacity <= 0) {
@@ -135,12 +152,14 @@ class BubblesRising {
     for (let i = 0; i < count; i++) {
       let particle: Particle;
 
+      const startX = Math.random() * this.width;
+
       if (this.particlePool.length > 0) {
         particle = this.particlePool.pop()!;
 
-        this.resetParticle(particle, Math.random() * this.width, this.height);
+        this.resetParticle(particle, startX, this.height);
       } else {
-        particle = this.createParticle(Math.random() * this.width, this.height);
+        particle = this.createParticle(startX, this.height);
       }
 
       this.particles.push(particle);
@@ -151,16 +170,16 @@ class BubblesRising {
     const [minSize, maxSize] = this.sizes;
 
     return {
-      x: x,
-      y: y,
+      x,
+      y,
       size: this.randomFloat(minSize, maxSize),
-      accelerationY: this.randomFloat(0.5, 1.5) / -180000,
-      accelerationFactor: this.randomFloat(0.1, 0.5) / 10000,
-      velocityX: 0.05,
+      accelerationY: this.randomFloat(0.5, 1.5) / BubblesRising.ACCELERATION_Y_DIVISOR,
+      accelerationFactor: this.randomFloat(0.2, 0.5) / BubblesRising.ACCELERATION_FACTOR_DIVISOR,
+      velocityX: BubblesRising.DEFAULT_VELOCITY_X,
       initialX: x,
       elapsedTime: 0,
       opacity: 1,
-      opacityDecay: 0.00125,
+      opacityDecay: BubblesRising.DEFAULT_OPACITY_DECAY,
     };
   }
 
@@ -170,29 +189,33 @@ class BubblesRising {
     particle.x = x;
     particle.y = y;
     particle.size = this.randomFloat(minSize, maxSize);
-    particle.accelerationY = this.randomFloat(0.5, 1.5) / -180000;
-    particle.accelerationFactor = this.randomFloat(0.1, 0.5) / 10000;
-    particle.velocityX = 0.05;
+    particle.accelerationY = this.randomFloat(0.5, 1.5) / BubblesRising.ACCELERATION_Y_DIVISOR;
+    particle.accelerationFactor =
+      this.randomFloat(0.2, 0.5) / BubblesRising.ACCELERATION_FACTOR_DIVISOR;
+    particle.velocityX = BubblesRising.DEFAULT_VELOCITY_X;
     particle.initialX = x;
     particle.elapsedTime = 0;
     particle.opacity = 1;
-    particle.opacityDecay = 0.00125;
+    particle.opacityDecay = BubblesRising.DEFAULT_OPACITY_DECAY;
   }
 
-  private updateParticle(particle: Particle): void {
-    particle.elapsedTime += this.frameTime;
+  private updateParticle(particle: Particle, deltaTime: number): void {
+    particle.elapsedTime += deltaTime;
 
     const accelerationX = (particle.initialX - particle.x) * particle.accelerationFactor;
-    const wobble = this.randomFloat(-0.0075, 0.0075);
+    const wobble = this.randomFloat(...BubblesRising.WOBBLE_RANGE);
 
-    particle.velocityX += accelerationX + wobble;
-    particle.x += particle.velocityX;
+    particle.velocityX += (accelerationX + wobble) * (deltaTime / 16.67);
+    particle.x += particle.velocityX * (deltaTime / 16.67);
 
     particle.y =
       0.5 * particle.accelerationY * particle.elapsedTime ** 2 + this.height + particle.size * 3;
 
     if (particle.elapsedTime >= BubblesRising.MAX_ELAPSED_TIME) {
-      particle.opacity = Math.max(0, particle.opacity - particle.opacityDecay);
+      particle.opacity = Math.max(
+        0,
+        particle.opacity - particle.opacityDecay * (deltaTime / 16.67),
+      );
     }
   }
 

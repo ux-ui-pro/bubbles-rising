@@ -9,7 +9,7 @@
 [![GitHub package version](https://img.shields.io/github/package-json/v/ux-ui-pro/bubbles-rising.svg)](https://github.com/ux-ui-pro/bubbles-rising)
 [![NPM Downloads](https://img.shields.io/npm/dm/bubbles-rising.svg?style=flat)](https://www.npmjs.org/package/bubbles-rising)
 
-<sup>900B gzipped</sup>
+<sup>1.6kB gzipped</sup>
 
 <a href="https://codepen.io/ux-ui/full/yLmjZVZ">Demo</a>
 
@@ -42,11 +42,11 @@ bubblesRising.init();
 
 &#10148; **Options**
 
-| Option    |          Type           |        Default         | Description                                                                                                                    |
-|:----------|:-----------------------:|:----------------------:|:-------------------------------------------------------------------------------------------------------------------------------|
+| Option    |          Type           |       Default        | Description                                                                                                                    |
+|:----------|:-----------------------:|:--------------------:|:-------------------------------------------------------------------------------------------------------------------------------|
 | `el`      | `string \| HTMLElement` |      `.bubbles`      | The container element for the animation. Can be a CSS selector (string) or an HTMLElement object.                              |
-| `color`   |        `string`         | `'rgb(120, 200, 150)'` | The color of the particles in the animation.                                                                                   |
-| `sizes`   |   `[number, number]`    |       `[3, 12]`        | The range of particle sizes, defined as an array where the first value is the minimum size and the second is the maximum size. |
+| `color`   |        `string`         | `rgb(120, 200, 150)` | The color of the particles in the animation.                                                                                   |
+| `sizes`   |   `[number, number]`    |      `[3, 12]`       | The range of particle sizes, defined as an array where the first value is the minimum size and the second is the maximum size. |
 
 <br>
 
