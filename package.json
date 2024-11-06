@@ -1,6 +1,6 @@
 {
   "name": "bubbles-rising",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "The BubblesRising class is designed to create an animation of bubbles that rise and gradually disappear over time.",
   "author": "ux-ui.pro",
   "license": "MIT",

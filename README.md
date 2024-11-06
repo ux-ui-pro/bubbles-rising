@@ -42,13 +42,16 @@ bubblesRising.init();
 
 &#10148; **Options**
 
-| Option    |          Type           |       Default        | Description                                                                                                                    |
-|:----------|:-----------------------:|:--------------------:|:-------------------------------------------------------------------------------------------------------------------------------|
-| `el`      | `string \| HTMLElement` |      `.bubbles`      | The container element for the animation. Can be a CSS selector (string) or an HTMLElement object.                              |
-| `color`   |        `string`         | `rgb(120, 200, 150)` | The color of the particles in the animation.                                                                                   |
-| `sizes`   |   `[number, number]`    |      `[3, 12]`       | The range of particle sizes, defined as an array where the first value is the minimum size and the second is the maximum size. |
+| Option  |                      Type                      |       Default        | Description                                                                                                                    |
+|:-------:|:----------------------------------------------:|:--------------------:|:-------------------------------------------------------------------------------------------------------------------------------|
+|  `el`   |            `string \| HTMLElement`             |      `.bubbles`      | The container element for the animation. Can be a CSS selector (string) or an HTMLElement object.                              |
+| `color` |                    `string`                    | `rgb(120, 200, 150)` | The color of the particles in the animation.                                                                                   |
+| `sizes` |               `[number, number]`               |      `[4, 12]`       | The range of particle sizes, defined as an array where the first value is the minimum size and the second is the maximum size. |
+| `shape` | `'circle' \| 'square' \| 'triangle' \| 'star'` |      `'circle'`      | The shape of the particles. Options are 'circle', 'square', 'triangle', or 'star'.                                             |
+| `angle` |                   `boolean`                    |       `false`        | Enables or disables rotation angles for the particles.                                                                         |
 
 <br>
+
 
 &#10148; **Methods**
 

@@ -9,7 +9,10 @@ interface Particle {
   elapsedTime: number;
   opacity: number;
   opacityDecay: number;
+  angle: number;
 }
+
+type ParticleShape = 'circle' | 'square' | 'triangle' | 'star';
 
 class BubblesRising {
   private container: HTMLElement | null;
@@ -24,6 +27,8 @@ class BubblesRising {
   private resizeScheduled: boolean = false;
   private particleColor: string;
   private sizes: [number, number];
+  private shape: ParticleShape;
+  private angleEnabled: boolean;
   private animationFrameId: number | null = null;
 
   private static readonly PARTICLE_ADD_INTERVAL = 500;
@@ -36,12 +41,26 @@ class BubblesRising {
   private static readonly WOBBLE_RANGE: [number, number] = [-0.0075, 0.0075];
 
   constructor(
-    options: { el?: HTMLElement | string; color?: string; sizes?: [number, number] } = {},
+    options: {
+      el?: HTMLElement | string;
+      color?: string;
+      sizes?: [number, number];
+      shape?: ParticleShape;
+      angle?: boolean;
+    } = {},
   ) {
-    const { el, color = 'rgb(120, 200, 150)', sizes = [3, 12] } = options;
+    const {
+      el,
+      color = 'rgb(120, 200, 150)',
+      sizes = [3, 12],
+      shape = 'circle',
+      angle = false,
+    } = options;
 
     this.particleColor = color;
     this.sizes = sizes;
+    this.shape = shape;
+    this.angleEnabled = angle;
 
     if (el instanceof HTMLElement) {
       this.container = el;
@@ -51,18 +70,18 @@ class BubblesRising {
       this.container = document.querySelector('.bubbles');
     }
 
-    if (!this.container) return;
+    if (this.container) {
+      this.canvas = document.createElement('canvas');
 
-    this.canvas = document.createElement('canvas');
+      Object.assign(this.canvas.style, {
+        position: 'absolute',
+        inset: '0',
+        margin: 'auto',
+      });
 
-    Object.assign(this.canvas.style, {
-      position: 'absolute',
-      inset: '0',
-      margin: 'auto',
-    });
-
-    this.container.append(this.canvas);
-    this.ctx = this.canvas.getContext('2d');
+      this.container.append(this.canvas);
+      this.ctx = this.canvas.getContext('2d');
+    }
   }
 
   private initializeCanvas(): void {
@@ -114,7 +133,6 @@ class BubblesRising {
     const deltaTime = now - this.lastFrameTime;
 
     this.lastFrameTime = now;
-
     this.animationFrameId = requestAnimationFrame(this.renderLoop);
 
     if (!this.ctx || !this.canvas) return;
@@ -166,24 +184,7 @@ class BubblesRising {
     }
   }
 
-  private createParticle(x: number, y: number): Particle {
-    const [minSize, maxSize] = this.sizes;
-
-    return {
-      x,
-      y,
-      size: this.randomFloat(minSize, maxSize),
-      accelerationY: this.randomFloat(0.5, 1.5) / BubblesRising.ACCELERATION_Y_DIVISOR,
-      accelerationFactor: this.randomFloat(0.2, 0.5) / BubblesRising.ACCELERATION_FACTOR_DIVISOR,
-      velocityX: BubblesRising.DEFAULT_VELOCITY_X,
-      initialX: x,
-      elapsedTime: 0,
-      opacity: 1,
-      opacityDecay: BubblesRising.DEFAULT_OPACITY_DECAY,
-    };
-  }
-
-  private resetParticle(particle: Particle, x: number, y: number): void {
+  private initializeParticle(particle: Particle, x: number, y: number): void {
     const [minSize, maxSize] = this.sizes;
 
     particle.x = x;
@@ -197,25 +198,35 @@ class BubblesRising {
     particle.elapsedTime = 0;
     particle.opacity = 1;
     particle.opacityDecay = BubblesRising.DEFAULT_OPACITY_DECAY;
+    particle.angle = this.angleEnabled ? this.randomFloat(0, 360) + Math.random() * 180 : 0;
+  }
+
+  private createParticle(x: number, y: number): Particle {
+    const particle: Particle = {} as Particle;
+
+    this.initializeParticle(particle, x, y);
+
+    return particle;
+  }
+
+  private resetParticle(particle: Particle, x: number, y: number): void {
+    this.initializeParticle(particle, x, y);
   }
 
   private updateParticle(particle: Particle, deltaTime: number): void {
     particle.elapsedTime += deltaTime;
 
+    const timeFactor = deltaTime / 16.67;
     const accelerationX = (particle.initialX - particle.x) * particle.accelerationFactor;
     const wobble = this.randomFloat(...BubblesRising.WOBBLE_RANGE);
 
-    particle.velocityX += (accelerationX + wobble) * (deltaTime / 16.67);
-    particle.x += particle.velocityX * (deltaTime / 16.67);
-
+    particle.velocityX += (accelerationX + wobble) * timeFactor;
+    particle.x += particle.velocityX * timeFactor;
     particle.y =
       0.5 * particle.accelerationY * particle.elapsedTime ** 2 + this.height + particle.size * 3;
 
     if (particle.elapsedTime >= BubblesRising.MAX_ELAPSED_TIME) {
-      particle.opacity = Math.max(
-        0,
-        particle.opacity - particle.opacityDecay * (deltaTime / 16.67),
-      );
+      particle.opacity = Math.max(0, particle.opacity - particle.opacityDecay * timeFactor);
     }
   }
 
@@ -223,10 +234,59 @@ class BubblesRising {
     if (!this.ctx) return;
 
     this.ctx.globalAlpha = particle.opacity;
-    this.ctx.beginPath();
-    this.ctx.arc(particle.x, particle.y, particle.size, 0, 2 * Math.PI);
-    this.ctx.fill();
+    this.ctx.fillStyle = this.particleColor;
+    this.ctx.save();
+    this.ctx.translate(particle.x, particle.y);
+    this.ctx.rotate((particle.angle * Math.PI) / 180);
+
+    switch (this.shape) {
+      case 'circle':
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, particle.size, 0, 2 * Math.PI);
+        this.ctx.fill();
+
+        break;
+      case 'square':
+        this.ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+
+        break;
+      case 'triangle':
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, -particle.size);
+        this.ctx.lineTo(-particle.size, particle.size / 2);
+        this.ctx.lineTo(particle.size, particle.size / 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        break;
+      case 'star':
+        this.drawStar(0, 0, particle.size / 2, 5);
+
+        break;
+    }
+
+    this.ctx.restore();
     this.ctx.globalAlpha = 1;
+  }
+
+  private drawStar(cx: number, cy: number, outerRadius: number, spikes: number): void {
+    if (!this.ctx) return;
+
+    const step = Math.PI / spikes;
+    const innerRadius = outerRadius / 2;
+
+    this.ctx.beginPath();
+
+    for (let i = 0; i < 2 * spikes; i++) {
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const x = cx + Math.cos(i * step) * radius;
+      const y = cy + Math.sin(i * step) * radius;
+
+      this.ctx.lineTo(x, y);
+    }
+
+    this.ctx.closePath();
+    this.ctx.fill();
   }
 
   private returnParticleToPool(particle: Particle): void {
