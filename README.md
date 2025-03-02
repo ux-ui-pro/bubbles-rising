@@ -9,7 +9,7 @@
 [![GitHub package version](https://img.shields.io/github/package-json/v/ux-ui-pro/bubbles-rising.svg)](https://github.com/ux-ui-pro/bubbles-rising)
 [![NPM Downloads](https://img.shields.io/npm/dm/bubbles-rising.svg?style=flat)](https://www.npmjs.org/package/bubbles-rising)
 
-<sup>1.6kB gzipped</sup>
+<sup>2kB gzipped</sup>
 
 <a href="https://codepen.io/ux-ui/full/yLmjZVZ">Demo</a>
 
@@ -32,8 +32,10 @@ import BubblesRising from 'bubbles-rising';
 ```javascript
 const bubblesRising = new BubblesRising({
   el: '.bubbles',
-  color: 'rgb(128, 128, 128)',
-  sizes: [2, 18],
+  color: 'rgb(158, 128, 128)',
+  sizes: [2, 24],
+  shape: 'star',
+  angle: true,
 });
 
 bubblesRising.init();
